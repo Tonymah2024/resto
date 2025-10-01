@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Restaurant Analytics Dashboard</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js for data visualization -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        /* Custom styles for a professional restaurant dashboard theme */
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(to bottom right, #111827, #1f2937); /* Professional dark gradient */
+            color: #d1d5db; /* Light gray text */
+        }
+        .kpi-card {
+            background-color: #1f2937;
+            border: 1px solid #374151;
+            transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+        }
+        .kpi-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.2), 0 4px 6px -2px rgba(0, 0, 0, 0.1);
+        }
+        .chart-container {
+            background-color: #1f2937;
+            border: 1px solid #374151;
+            padding: 1.5rem;
+            border-radius: 0.75rem;
+            position: relative;
+            height: 400px;
+        }
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #1f2937;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #4b5563;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #6b7280;
+        }
+        .modal-backdrop {
+            background-color: rgba(0,0,0,0.5);
+        }
+    </style>
+</head>
+<body class="antialiased">
+
+    <div class="flex flex-col min-h-screen">
+        <!-- Header -->
+        <header class="bg-gray-900/80 backdrop-blur-sm border-b border-gray-700 p-4 sticky top-0 z-10">
+            <div class="container mx-auto flex justify-between items-center">
+                <div class="flex items-center gap-3">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-amber-500"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2v0a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3z"/></svg>
+                    <h1 class="text-xl md:text-2xl font-bold text-white">UrbanBites Bistro | Restaurant Dashboard</h1>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="flex-grow container mx-auto p-4 md:p-6 lg:p-8">
+            <!-- Filter Controls -->
+            <div class="mb-6 p-4 rounded-lg bg-gray-800 border border-gray-700 flex flex-wrap items-center gap-4">
+                <div class="flex-grow">
+                    <label for="date-range" class="text-sm font-medium text-gray-400 block mb-1">Date</label>
+                    <input type="date" id="date-range" class="w-full bg-gray-700 border border-gray-600 rounded-md px-3 py-2 text-white focus:ring-2 focus:ring-amber-500 focus:border-amber-500" value="2025-10-01">
+                </div>
+                <div class="flex-grow">
+                    <label for="meal-period" class="text-sm font-medium text-gray-400 block mb-1">Meal Period</label>
+                    <select id="meal-period" class="w-full bg-gray-700 border border-gray-600 rounded-md px-3 py-2 text-white focus:ring-2 focus:ring-amber-500 focus:border-amber-500">
+                        <option>All Day</option>
+                        <option>Lunch</option>
+                        <option>Dinner</option>
+                    </select>
+                </div>
+                <div class="pt-6 flex flex-wrap gap-2">
+                    <button id="apply-filters-btn" class="flex-1 bg-amber-600 hover:bg-amber-700 text-white font-bold py-2 px-4 rounded-md transition-colors">
+                        Apply Filters
+                    </button>
+                    <input type="file" id="file-input" class="hidden" accept=".json">
+                    <button id="load-data-btn" class="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-md transition-colors">
+                        Load Data
+                    </button>
+                    <button id="generate-insights-btn" class="flex-1 bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded-md transition-colors whitespace-nowrap">
+                        ✨ Generate Insights
+                    </button>
+                </div>
+            </div>
+            
+            <!-- KPI Cards -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-6">
+                <div class="kpi-card p-5 rounded-lg">
+                    <p class="text-sm font-medium text-gray-400">Total Revenue</p>
+                    <div>
+                        <p id="kpi-revenue" class="text-3xl font-bold text-white mt-2">$9,850 CAD</p>
+                        <p id="kpi-revenue-change" class="text-xs text-green-400 flex items-center mt-1">+8.2% vs last Wednesday</p>
+                    </div>
+                </div>
+                <div class="kpi-card p-5 rounded-lg">
+                    <p class="text-sm font-medium text-gray-400">Average Check Size</p>
+                     <div>
+                        <p id="kpi-avg-check" class="text-3xl font-bold text-white mt-2">$65.67 CAD</p>
+                        <p id="kpi-avg-check-change" class="text-xs text-green-400 flex items-center mt-1">+$2.10 vs last Wednesday</p>
+                    </div>
+                </div>
+                <div class="kpi-card p-5 rounded-lg">
+                    <p class="text-sm font-medium text-gray-400">Total Covers (Guests)</p>
+                    <div>
+                        <p id="kpi-covers" class="text-3xl font-bold text-white mt-2">150</p>
+                        <p id="kpi-covers-change" class="text-xs text-green-400 flex items-center mt-1">+12 vs last Wednesday</p>
+                    </div>
+                </div>
+                <div class="kpi-card p-5 rounded-lg">
+                    <p class="text-sm font-medium text-gray-400">Table Turnover Rate</p>
+                    <div>
+                        <p id="kpi-turnover" class="text-3xl font-bold text-white mt-2">2.5x</p>
+                        <p id="kpi-turnover-change" class="text-xs text-red-400 flex items-center mt-1">-0.2x vs last Wednesday</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Charts Grid -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
+                <div class="chart-container">
+                    <h3 class="text-lg font-semibold text-white mb-4">Hourly Sales Performance</h3>
+                    <canvas id="hourlySalesChart"></canvas>
+                </div>
+                <div class="chart-container">
+                    <h3 class="text-lg font-semibold text-white mb-4">Sales by Category</h3>
+                    <canvas id="salesByCategoryChart"></canvas>
+                </div>
+                <div class="chart-container">
+                    <h3 class="text-lg font-semibold text-white mb-4">Top 5 Selling Items</h3>
+                    <canvas id="topItemsChart"></canvas>
+                </div>
+                <div class="chart-container">
+                    <h3 class="text-lg font-semibold text-white mb-4">Customer Satisfaction</h3>
+                    <canvas id="satisfactionChart"></canvas>
+                </div>
+            </div>
+        </main>
+
+        <!-- Footer -->
+        <footer class="text-center py-4 border-t border-gray-700 mt-auto">
+            <p class="text-sm text-gray-500">&copy; 2025 VisiVault Analytics Limited. For demonstration purposes only.</p>
+        </footer>
+    </div>
+
+    <!-- Gemini Insights Modal -->
+    <div id="insights-modal" class="fixed inset-0 z-50 items-center justify-center hidden p-4 overflow-x-hidden overflow-y-auto bg-gray-900/80">
+        <div class="relative w-full max-w-2xl max-h-full">
+            <div class="relative bg-gray-800 rounded-lg shadow border border-gray-700">
+                <div class="flex items-start justify-between p-4 border-b rounded-t border-gray-600">
+                    <h3 class="text-xl font-semibold text-white">✨ AI Generated Insights</h3>
+                    <button type="button" id="close-modal-btn" class="text-gray-400 bg-transparent hover:bg-gray-700 hover:text-white rounded-lg text-sm w-8 h-8 ml-auto inline-flex justify-center items-center">
+                        <svg class="w-3 h-3" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 14 14"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m1 1 6 6m0 0 6 6M7 7l6-6M7 7l-6 6"/></svg>
+                        <span class="sr-only">Close modal</span>
+                    </button>
+                </div>
+                <div class="p-6 space-y-6">
+                    <div id="insights-content" class="text-base leading-relaxed text-gray-300"><p>Generating insights...</p></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let geminiApiKey = '';
+        const generateRandomData = (count, min, max, decimals = 0) => Array.from({ length: count }, () => parseFloat((Math.random() * (max - min) + min).toFixed(decimals)));
+        const chartTextColor = '#9ca3af';
+        const chartGridColor = '#374151';
+        let hourlySalesChart, salesByCategoryChart, topItemsChart, satisfactionChart;
+
+        function createCharts() {
+            const hourlySalesCtx = document.getElementById('hourlySalesChart').getContext('2d');
+            hourlySalesChart = new Chart(hourlySalesCtx, {
+                type: 'line',
+                data: {
+                    labels: ['11am', '12pm', '1pm', '2pm', '5pm', '6pm', '7pm', '8pm', '9pm'],
+                    datasets: [{
+                        label: 'Sales ($ CAD)',
+                        data: generateRandomData(9, 300, 1500),
+                        borderColor: '#f59e0b',
+                        backgroundColor: 'rgba(245, 158, 11, 0.1)',
+                        fill: true,
+                        tension: 0.4,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: { 
+                            ticks: { color: chartTextColor },
+                            grid: { color: chartGridColor }
+                        },
+                        x: {
+                            ticks: { color: chartTextColor },
+                            grid: { color: chartGridColor }
+                        }
+                    },
+                    plugins: { 
+                        legend: { 
+                            labels: { color: chartTextColor } 
+                        } 
+                    }
+                }
+            });
+
+            const salesByCategoryCtx = document.getElementById('salesByCategoryChart').getContext('2d');
+            salesByCategoryChart = new Chart(salesByCategoryCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Food', 'Beverages', 'Dessert', 'Other'],
+                    datasets: [{
+                        data: [65, 25, 8, 2],
+                        backgroundColor: ['#f59e0b', '#2563eb', '#9333ea', '#6b7280'],
+                        borderColor: '#1f2937',
+                        borderWidth: 4,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '60%',
+                    plugins: {
+                        legend: {
+                            position: 'right',
+                            labels: { color: chartTextColor }
+                        }
+                    }
+                }
+            });
+
+            const topItemsCtx = document.getElementById('topItemsChart').getContext('2d');
+            topItemsChart = new Chart(topItemsCtx, {
+                type: 'bar',
+                data: {
+                    labels: ['Bistro Burger', 'Salmon Risotto', 'Truffle Fries', 'Steak Frites', 'Caesar Salad'],
+                    datasets: [{
+                        label: 'Units Sold',
+                        data: generateRandomData(5, 20, 70),
+                        backgroundColor: '#f59e0b',
+                        borderRadius: 4,
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            ticks: { color: chartTextColor },
+                            grid: { color: chartGridColor }
+                        },
+                        y: {
+                            ticks: { color: chartTextColor },
+                            grid: { display: false }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    }
+                }
+            });
+
+            const satisfactionCtx = document.getElementById('satisfactionChart').getContext('2d');
+            satisfactionChart = new Chart(satisfactionCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Excellent (5)', 'Good (4)', 'Average (3)', 'Poor (1-2)'],
+                    datasets: [{
+                        data: generateRandomData(4, 5, 50),
+                        backgroundColor: ['#22c55e', '#a3e635', '#facc15', '#ef4444'],
+                        borderColor: '#1f2937',
+                        borderWidth: 4,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '60%',
+                    plugins: {
+                        legend: {
+                            position: 'right',
+                            labels: { color: chartTextColor }
+                        }
+                    }
+                }
+            });
+        }
+        
+        function updateDashboardWithRandomData() {
+            document.getElementById('kpi-revenue').textContent = '$' + (Math.random() * (12000 - 8000) + 8000).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' CAD';
+            document.getElementById('kpi-avg-check').textContent = '$' + (Math.random() * (75 - 60) + 60).toFixed(2) + ' CAD';
+            document.getElementById('kpi-covers').textContent = Math.floor(Math.random() * (180 - 130) + 130);
+            document.getElementById('kpi-turnover').textContent = (Math.random() * (3.0 - 2.0) + 2.0).toFixed(1) + 'x';
+
+            hourlySalesChart.data.datasets[0].data = generateRandomData(9, 300, 1500);
+            hourlySalesChart.update();
+            salesByCategoryChart.data.datasets[0].data = generateRandomData(4, 5, 70);
+            salesByCategoryChart.update();
+            topItemsChart.data.datasets[0].data = generateRandomData(5, 20, 70);
+            topItemsChart.update();
+            satisfactionChart.data.datasets[0].data = generateRandomData(4, 5, 50);
+            satisfactionChart.update();
+        }
+
+        function updateDashboardWithData(data) {
+            try {
+                document.getElementById('kpi-revenue').textContent = data.kpis.revenue;
+                document.getElementById('kpi-revenue-change').textContent = data.kpis.revenueChange;
+                document.getElementById('kpi-avg-check').textContent = data.kpis.avgCheck;
+                document.getElementById('kpi-avg-check-change').textContent = data.kpis.avgCheckChange;
+                document.getElementById('kpi-covers').textContent = data.kpis.covers;
+                document.getElementById('kpi-covers-change').textContent = data.kpis.coversChange;
+                document.getElementById('kpi-turnover').textContent = data.kpis.turnover;
+                document.getElementById('kpi-turnover-change').textContent = data.kpis.turnoverChange;
+
+                hourlySalesChart.data.labels = data.charts.hourlySales.labels;
+                hourlySalesChart.data.datasets[0].data = data.charts.hourlySales.values;
+                hourlySalesChart.update();
+
+                salesByCategoryChart.data.labels = data.charts.salesByCategory.labels;
+                salesByCategoryChart.data.datasets[0].data = data.charts.salesByCategory.values;
+                salesByCategoryChart.update();
+
+                topItemsChart.data.labels = data.charts.topItems.labels;
+                topItemsChart.data.datasets[0].data = data.charts.topItems.values;
+                topItemsChart.update();
+
+                satisfactionChart.data.labels = data.charts.satisfaction.labels;
+                satisfactionChart.data.datasets[0].data = data.charts.satisfaction.values;
+                satisfactionChart.update();
+                
+                const applyBtn = document.getElementById('apply-filters-btn');
+                applyBtn.disabled = true;
+                applyBtn.textContent = 'Custom Data Loaded';
+                applyBtn.classList.add('opacity-50', 'cursor-not-allowed');
+
+            } catch(e) {
+                alert("Failed to load data. Ensure the JSON file has the correct structure.");
+                console.error("Error updating dashboard with file data:", e);
+            }
+        }
+        
+        /*
+            Expected JSON structure for custom data loading:
+            {
+              "kpis": {
+                "revenue": "$11,200 CAD",
+                "revenueChange": "+12% vs last Wednesday",
+                "avgCheck": "$68.50 CAD",
+                "avgCheckChange": "+$4.93 vs last Wednesday",
+                "covers": "163",
+                "coversChange": "+25 vs last Wednesday",
+                "turnover": "2.8x",
+                "turnoverChange": "+0.1x vs last Wednesday"
+              },
+              "charts": {
+                "hourlySales": {
+                  "labels": ["11am", "12pm", "1pm", "2pm", "5pm", "6pm", "7pm", "8pm", "9pm"],
+                  "values": [450, 1200, 1800, 900, 800, 1500, 1950, 1600, 1000]
+                },
+                "salesByCategory": {
+                  "labels": ["Food", "Beverages", "Dessert", "Other"],
+                  "values": [70, 22, 6, 2]
+                },
+                "topItems": {
+                  "labels": ["Bistro Burger", "Salmon Risotto", "Truffle Fries", "Steak Frites", "Caesar Salad"],
+                  "values": [82, 65, 55, 48, 35]
+                },
+                "satisfaction": {
+                  "labels": ["Excellent (5)", "Good (4)", "Average (3)", "Poor (1-2)"],
+                  "values": [68, 22, 7, 3]
+                }
+              }
+            }
+        */
+
+        async function generateInsights() {
+            const insightsContent = document.getElementById('insights-content');
+            insightsContent.innerHTML = '<p class="text-gray-300">Generating insights...</p>';
+            document.getElementById('insights-modal').classList.remove('hidden');
+            document.getElementById('insights-modal').classList.add('flex');
+
+            const kpis = {
+                revenue: document.getElementById('kpi-revenue').textContent,
+                avgCheck: document.getElementById('kpi-avg-check').textContent,
+                covers: document.getElementById('kpi-covers').textContent,
+                turnover: document.getElementById('kpi-turnover').textContent,
+            };
+            const prompt = `
+                As a senior restaurant operations analyst for UrbanBites Bistro in Canada, provide a brief, executive-level summary of the following daily sales dashboard data.
+                Your summary should be 2-3 paragraphs. First, give a high-level overview of the day's performance. Second, identify the most significant insight, risk, or opportunity revealed by the data and suggest a clear, actionable next step.
+                Present the output in clean HTML format.
+
+                Here is the data for today:
+                - Total Revenue: ${kpis.revenue}
+                - Average Check Size: ${kpis.avgCheck}
+                - Total Covers (Guests): ${kpis.covers}
+                - Table Turnover Rate: ${kpis.turnover}
+                - Sales by Category (%): ${salesByCategoryChart.data.labels.map((l, i) => `${l}: ${salesByCategoryChart.data.datasets[0].data[i]}`).join(', ')}
+                - Top Selling Items (Units Sold): ${topItemsChart.data.labels.map((l, i) => `${l}: ${topItemsChart.data.datasets[0].data[i]}`).join(', ')}
+            `;
+
+             try {
+                if (!geminiApiKey) {
+                    throw new Error("API Key is not set.");
+                }
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${geminiApiKey}`;
+                const payload = { contents: [{ parts: [{ text: prompt }] }] };
+                const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+
+                if (!response.ok) throw new Error(`API call failed: ${response.status}`);
+                
+                const result = await response.json();
+                const text = result.candidates?.[0]?.content?.parts?.[0]?.text;
+                insightsContent.innerHTML = text || '<p>The model returned an empty response.</p>';
+
+            } catch (error) {
+                console.error("Error calling Gemini API:", error);
+                insightsContent.innerHTML = `<p class="text-red-400">An error occurred while generating insights. Ensure your API key is correct and check the console for details.</p>`;
+            }
+        }
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            createCharts();
+            geminiApiKey = prompt("Please enter your Google AI API key to enable AI insights:");
+            
+            const generateInsightsBtn = document.getElementById('generate-insights-btn');
+            if (!geminiApiKey) {
+                generateInsightsBtn.disabled = true;
+                generateInsightsBtn.title = "No API Key provided. Refresh to enter one.";
+                generateInsightsBtn.classList.add('opacity-50', 'cursor-not-allowed');
+            }
+            
+            document.getElementById('apply-filters-btn').addEventListener('click', () => {
+                const btn = document.getElementById('apply-filters-btn');
+                btn.textContent = 'Loading...';
+                btn.disabled = true;
+                setTimeout(() => {
+                    updateDashboardWithRandomData();
+                    btn.textContent = 'Apply Filters';
+                    btn.disabled = false;
+                }, 750);
+            });
+
+            const loadDataBtn = document.getElementById('load-data-btn');
+            const fileInput = document.getElementById('file-input');
+            loadDataBtn.addEventListener('click', () => fileInput.click());
+            fileInput.addEventListener('change', (event) => {
+                const file = event.target.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        updateDashboardWithData(JSON.parse(e.target.result));
+                    } catch (err) {
+                        alert('Error parsing JSON file. Please check the file format.');
+                    }
+                };
+                reader.readAsText(file);
+            });
+
+            generateInsightsBtn.addEventListener('click', generateInsights);
+            document.getElementById('close-modal-btn').addEventListener('click', () => {
+                const modal = document.getElementById('insights-modal');
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+            });
+        });
+    </script>
+</body>
+</html>
+
+
