@@ -5,6 +5,7 @@ This is an interactive, single-page web application that demonstrates a modern d
 The dashboard is built entirely with front-end technologies and uses Google's Gemini API to generate AI-powered insights from the displayed data.
 
 Live Demo: https://tonymah2024.github.io/resto/
+
 Key Features
 
     At-a-Glance KPIs: Key Performance Indicators are prominently displayed for a quick overview of the day's success, including:
